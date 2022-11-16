@@ -65,7 +65,7 @@ fn main() -> StdIOResult<()> {
                 found_format = true
             }
         }
-        if found_format == false {
+        if !found_format {
             let a: Vec<_> = config.matches.values().collect();
             eprintln!(
                 "Provided format '{}' does not exit, allowed values are {}",
@@ -82,20 +82,16 @@ fn main() -> StdIOResult<()> {
                 println!("Failed to read line");
             }
             Ok(l) => {
-                let val = parse(l.clone(), &config);
-                if val.is_none() {
-                    if opt.stop {
-                        eprintln!("parse failed: {:?}", l);
-                        break;
-                    }
-                } else {
-                    let entry = val.unwrap();
+                if let Some(entry) = parse(l.clone(), &config) {
                     if opt.format == json_const {
                         let json = serde_json::to_string(&entry).unwrap();
                         println!("{}", json);
                     } else {
                         println!("{}", entry.get(&opt.format).unwrap());
                     }
+                } else if opt.stop {
+                    eprintln!("parse failed: {:?}", l);
+                    break;
                 }
             }
         }
@@ -108,9 +104,7 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
 
     let parsed_value = re.captures(&l);
 
-    if parsed_value.is_none() {
-        return None;
-    }
+    parsed_value.as_ref()?;
     let caps = parsed_value.unwrap();
 
     let mut dummy: BTreeMap<String, String> = BTreeMap::new();

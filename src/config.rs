@@ -3,7 +3,6 @@
   This file is a module with name 'config', unlike ruby we need not declare the module. Filename is the module name
 
 */
-use serde_json;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
