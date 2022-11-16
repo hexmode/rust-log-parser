@@ -3,16 +3,15 @@
   This file is a module with name 'config', unlike ruby we need not declare the module. Filename is the module name
 
 */
-use std::collections::BTreeMap;
-use std::path::PathBuf;
-use std::fs::File;
 use serde_json;
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::path::PathBuf;
 
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-  pub regex: String,
-  pub matches: BTreeMap<String, String>
+    pub regex: String,
+    pub matches: BTreeMap<String, String>,
 }
 
 pub fn default() -> self::Config {
@@ -28,25 +27,26 @@ pub fn default() -> self::Config {
     dummy.insert("9".to_string(), "ua".to_string());
 
     Config {
-      regex: String::from(r#"^(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}) \[(\S+ \+\d{4})\] "(GET|HEAD|POST|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH) (\S+) (\S+)" (\d{3}) "rt=(\S+)" "(\S+)" "(.*)"$"#),
-      matches: dummy
+        regex: String::from(
+            r#"^(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}) \[(\S+ \+\d{4})\] "(GET|HEAD|POST|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH) (\S+) (\S+)" (\d{3}) "rt=(\S+)" "(\S+)" "(.*)"$"#,
+        ),
+        matches: dummy,
     }
 }
 
 pub fn from_file(f: PathBuf) -> Result<self::Config, String> {
-  match File::open(f.clone()) {
-    Ok(file) => {
-      let config: Result<Config, serde_json::Error> = serde_json::from_reader(file);
-      match config {
-        Ok(c) => { Ok(c) }
-        Err(e) => {
-          Err(format!("Failed to parse config: '{}'", e))
+    match File::open(f.clone()) {
+        Ok(file) => {
+            let config: Result<Config, serde_json::Error> = serde_json::from_reader(file);
+            match config {
+                Ok(c) => Ok(c),
+                Err(e) => Err(format!("Failed to parse config: '{}'", e)),
+            }
         }
-      }
+        Err(e) => Err(format!(
+            "Failed to read config file '{}': {}",
+            f.to_str().unwrap(),
+            e
+        )),
     }
-    Err(e) => {
-      Err(format!("Failed to read config file '{}': {}", f.to_str().unwrap(), e))
-    }
-  }
-
 }
