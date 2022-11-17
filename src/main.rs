@@ -7,6 +7,7 @@ extern crate structopt;
 extern crate itertools;
 
 use std::collections::BTreeMap;
+use std::io::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -37,77 +38,81 @@ struct Opt {
     format: String,
 }
 
-fn main() -> StdIOResult<()> {
-    let opt = Opt::from_args();
+const JSON: &str = "json";
 
-    let buffer: Box<dyn BufRead> = match opt.file {
+fn get_buffer(name: &Option<PathBuf>) -> Box<dyn BufRead> {
+    match name {
         None => Box::new(BufReader::new(io::stdin())),
         Some(file) => Box::new(BufReader::new(File::open(file).unwrap())),
-    };
+    }
+}
 
-    let config = match opt.config {
+fn get_config(config: &Option<PathBuf>) -> config::Config {
+    match config {
         None => config::default(),
-        Some(f) => match config::from_file(f) {
+        Some(f) => match config::from_file(f.to_path_buf()) {
             Ok(config) => config,
             Err(v) => {
                 eprintln!("{}", v);
                 std::process::exit(-1);
             }
         },
-    };
+    }
+}
 
-    let json_const: String = "json".to_string();
-
-    if opt.format != json_const {
+fn get_format(format: &String, matches: &BTreeMap<String, String>) -> String {
+    if *format != JSON {
         let mut found_format = false;
-        for val in config.matches.values() {
-            if val == &opt.format {
+        for val in matches.values() {
+            if val.eq(format) {
                 found_format = true
             }
         }
         if !found_format {
-            let a: Vec<_> = config.matches.values().collect();
+            let a: Vec<_> = matches.values().collect();
             eprintln!(
                 "Provided format '{}' does not exit, allowed values are {}",
-                opt.format,
+                format,
                 itertools::join(a, ", ")
             );
             std::process::exit(-1);
         }
     }
+    format.to_string()
+}
 
-    for line in buffer.lines() {
-        match line {
-            Err(_e) => {
-                println!("Failed to read line");
-            }
-            Ok(l) => {
-                if let Some(entry) = parse(l.clone(), &config) {
-                    if opt.format == json_const {
-                        let json = serde_json::to_string(&entry).unwrap();
-                        println!("{}", json);
-                    } else {
-                        println!("{}", entry.get(&opt.format).unwrap());
-                    }
-                } else if opt.stop {
-                    eprintln!("parse failed: {:?}", l);
-                    break;
+fn handle_line(line: Result<String, Error>, opt: &Opt) {
+    let config = get_config(&opt.config);
+    let format = get_format(&opt.format, &config.matches);
+
+    match line {
+        Err(_) => {
+            println!("Failed to read line");
+            std::process::exit(-1);
+        }
+        Ok(l) => {
+            if let Some(entry) = parse(l.clone(), &config) {
+                if format == JSON {
+                    let json = serde_json::to_string(&entry).unwrap();
+                    println!("{}", json);
+                } else {
+                    println!("{}", entry.get(&format).unwrap());
                 }
+            } else if opt.stop {
+                eprintln!("parse failed: {:?}", l);
+                std::process::exit(-1);
             }
         }
     }
-    Ok(())
 }
 
 fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
+    let mut dummy: BTreeMap<String, String> = BTreeMap::new();
     let re = Regex::new(&config.regex).unwrap();
-
     let parsed_value = re.captures(&l);
 
     parsed_value.as_ref()?;
     let caps = parsed_value.unwrap();
-
-    let mut dummy: BTreeMap<String, String> = BTreeMap::new();
 
     for (k, v) in config.matches.iter() {
         dummy.insert(
@@ -118,4 +123,14 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
         );
     }
     Some(dummy)
+}
+
+fn main() -> StdIOResult<()> {
+    let opt = Opt::from_args();
+    let buffer: Box<dyn BufRead> = get_buffer(&opt.file);
+
+    for line in buffer.lines() {
+        handle_line(line, &opt);
+    }
+    Ok(())
 }
