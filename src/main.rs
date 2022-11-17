@@ -93,12 +93,7 @@ fn handle_line(line: Result<String, Error>, opt: &Opt) {
         }
         Ok(l) => {
             if let Some(entry) = parse(l.clone(), &config) {
-                if format == JSON {
-                    let json = serde_json::to_string(&entry).unwrap();
-                    println!("{}", json);
-                } else {
-                    println!("{}", entry.get(&format).unwrap());
-                }
+                print_entry(format, entry);
             } else if opt.stop {
                 eprintln!("parse failed: {:?}", l);
                 std::process::exit(-1);
@@ -124,6 +119,15 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
         );
     }
     Some(dummy)
+}
+
+fn print_entry(format: String, entry: BTreeMap<String, String>) {
+    if format == JSON {
+        let json = serde_json::to_string(&entry).unwrap();
+        println!("{}", json);
+    } else {
+        println!("{}", entry.get(&format).unwrap());
+    }
 }
 
 #[unix_sigpipe = "sig_dfl"]
