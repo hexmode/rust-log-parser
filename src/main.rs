@@ -1,3 +1,4 @@
+#![feature(unix_sigpipe)]
 #[macro_use]
 extern crate serde;
 extern crate regex;
@@ -125,6 +126,7 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
     Some(dummy)
 }
 
+#[unix_sigpipe = "sig_dfl"]
 fn main() -> StdIOResult<()> {
     let opt = Opt::from_args();
     let buffer: Box<dyn BufRead> = get_buffer(&opt.file);
