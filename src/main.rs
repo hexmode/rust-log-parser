@@ -115,7 +115,6 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
 
 fn parse_fragment(dummy: &mut BTreeMap<String, String>, captured: &str) {
     if !captured.is_empty() {
-        println!("{}", captured);
         // FIXME: need to check error here instead of just unwrap
         let parsed: Value = serde_json::from_str(captured).unwrap();
         for k in parsed.as_object().unwrap() {
