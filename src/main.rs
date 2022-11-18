@@ -1,24 +1,14 @@
 #![feature(unix_sigpipe)]
-#[macro_use]
-extern crate serde;
-extern crate regex;
-extern crate serde_json;
-extern crate structopt;
-
-extern crate itertools;
-
+use regex::Regex;
+use serde_json::Value;
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::io::Error;
+use std::io::{self, BufRead, BufReader, Result as StdIOResult};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use regex::Captures;
-use regex::Regex;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Result as StdIOResult};
-
 mod config;
-
 use config::Config;
 
 #[derive(StructOpt, Debug)]
@@ -117,13 +107,22 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
         if v != JSON {
             dummy.insert(v.to_string(), captured.to_string());
         } else {
-            parse_fragment(&dummy, captured)
+            parse_fragment(&mut dummy, captured)
         }
     }
     Some(dummy)
 }
 
-fn parse_fragment(dummy: &BTreeMap<String, String>, captured: &str) {}
+fn parse_fragment(dummy: &mut BTreeMap<String, String>, captured: &str) {
+    if !captured.is_empty() {
+        println!("{}", captured);
+        // FIXME: need to check error here instead of just unwrap
+        let parsed: Value = serde_json::from_str(captured).unwrap();
+        for k in parsed.as_object().unwrap() {
+            dummy.insert(k.0.to_string(), k.1.to_string());
+        }
+    }
+}
 
 fn print_entry(format: String, entry: BTreeMap<String, String>) {
     if format == JSON {

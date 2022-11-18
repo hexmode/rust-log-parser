@@ -7,6 +7,8 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub regex: String,
