@@ -12,6 +12,7 @@ use std::io::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+use regex::Captures;
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result as StdIOResult};
@@ -111,15 +112,18 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
     let caps = parsed_value.unwrap();
 
     for (k, v) in config.matches.iter() {
-        dummy.insert(
-            v.to_string(),
-            caps.get(k.parse().unwrap())
-                .map_or("", |m| m.as_str())
-                .to_string(),
-        );
+        let captured = caps.get(k.parse().unwrap()).map_or("", |m| m.as_str());
+
+        if v != JSON {
+            dummy.insert(v.to_string(), captured.to_string());
+        } else {
+            parse_fragment(&dummy, captured)
+        }
     }
     Some(dummy)
 }
+
+fn parse_fragment(dummy: &BTreeMap<String, String>, captured: &str) {}
 
 fn print_entry(format: String, entry: BTreeMap<String, String>) {
     if format == JSON {
