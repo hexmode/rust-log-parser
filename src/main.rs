@@ -113,12 +113,20 @@ fn parse(l: String, config: &Config) -> Option<BTreeMap<String, String>> {
     Some(dummy)
 }
 
+fn convert_to_string(val: &Value) -> String {
+    if val.is_string() {
+        let s = val.to_string();
+        return s[1..s.len() - 1].to_string();
+    }
+    val.to_string()
+}
+
 fn parse_fragment(dummy: &mut BTreeMap<String, String>, captured: &str) {
     if !captured.is_empty() {
         // FIXME: need to check error here instead of just unwrap
         let parsed: Value = serde_json::from_str(captured).unwrap();
         for k in parsed.as_object().unwrap() {
-            dummy.insert(k.0.to_string(), k.1.to_string());
+            dummy.insert(k.0.to_string(), convert_to_string(k.1));
         }
     }
 }
